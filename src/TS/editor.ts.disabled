@@ -1,0 +1,454 @@
+import { parcelType, parcelID, ParcelAny, parcelUndefined, parcelResource } from "./parcelResource.ts";
+
+import { generateExampleParcels } from "./generateExampleParcels.ts";
+
+let [exampleResource, exampleStructure, exampleResearch, exampleUnique] = generateExampleParcels();
+
+console.warn(exampleResource);
+
+// ? Constants
+
+// * Editor
+const EDITOR__VERSION: string = "4.1.5"; // Editor Version
+const EDITOR__COMPAT: string = "4.*.*"; // Editor compatible with files of
+const EDITOR__DISABLE_DEBUG = true;
+
+function reportEditorVersion() {
+	console.groupCollapsed(`Editor Version : ${EDITOR__VERSION}`);
+	console.info(`Parcel Editor ${EDITOR__VERSION} starting up`);
+	console.info(`Editor is compatible with the files of the ${EDITOR__COMPAT} series`);
+	console.groupEnd();
+}
+
+// ? Settings
+type searchFilterOptions = "all" | parcelType;
+type editorSettings = {
+	lastSearchFilter: searchFilterOptions;
+	useLastSearchFilter: boolean;
+	useSimpleMode: boolean;
+	useStrictMode: boolean;
+};
+let editorSettings: editorSettings = {
+	lastSearchFilter: "all",
+	useLastSearchFilter: true,
+	useSimpleMode: false,
+	useStrictMode: false,
+};
+
+function saveEditorSettings() {
+	localStorage.setItem("editor_settings", JSON.stringify(editorSettings));
+}
+function loadEditorSettings() {
+	const storedSettings = localStorage.getItem("editor_settings");
+	if (storedSettings) {
+		Object.assign(editorSettings, JSON.parse(storedSettings));
+	} else {
+		saveEditorSettings();
+	}
+}
+
+// ? Regexes
+
+const regexID = new RegExp("^[a-z]([a-z_]*[a-z])?$");
+const regexName = new RegExp("^[a-zA-Z](?:[a-zA-Z ]*[a-zA-Z])?$");
+
+function validateParcelId(id: string): boolean {
+	// Validate if id is only lowercase letters and underscores
+	return regexID.test(id);
+}
+
+function validateParcelName(name: string): boolean {
+	// Validate if name is only letters (uppercase and lowercase) and spaces
+	return regexName.test(name);
+}
+
+// ? Page Element Definitions
+const ELEMENT__SEARCH_FILTER = document.getElementById("menu__search_parcel__selector")! as HTMLSelectElement;
+const ELEMENT__MENU__SELECT_PARCEL = document.getElementById("menu__select_parcel")! as HTMLDivElement;
+const ELEMENT__MENU__ADD_PARCEL_ID = document.getElementById("menu__add_parcel__id")! as HTMLInputElement;
+const ELEMENT__MENU__ADD_PARCEL_SUBMIT = document.getElementById("menu__add_parcel__submit")! as HTMLButtonElement;
+
+const ELEMENT__MENU__EDIT_PARCEL_TYPE = document.getElementById("menu__edit_parcel_type")! as HTMLSelectElement;
+const ELEMENT__MENU__EDIT_PARCEL_ID = document.getElementById("menu__edit_parcel_id")! as HTMLInputElement;
+const ELEMENT__MENU__EDIT_PARCEL_NAME = document.getElementById("menu__edit_parcel_name")! as HTMLInputElement;
+const ELEMENT__MENU__EDIT_PARCEL_UNLOCKED = document.getElementById("menu__edit_parcel_unlocked")! as HTMLInputElement;
+
+const ELEMENT__MENU__EDIT_PARCEL_VALUE = document.getElementById("menu__edit_parcel_value")! as HTMLButtonElement;
+
+const ELEMENT__MENU__EDIT_PARCEL_BUY = document.getElementById("menu__edit_parcel_buy")! as HTMLButtonElement;
+const ELEMENT__MENU__EDIT_PARCEL_SELL = document.getElementById("menu__edit_parcel_sell")! as HTMLButtonElement;
+const ELEMENT__MENU__EDIT_PARCEL_CRAFT = document.getElementById("menu__edit_parcel_craft")! as HTMLButtonElement;
+const ELEMENT__MENU__EDIT_PARCEL_CREATE = document.getElementById("menu__edit_parcel_create")! as HTMLButtonElement;
+
+const ELEMENT__MENU__EDIT_PARCEL_CHARGES = document.getElementById("menu__edit_parcel_charges")! as HTMLButtonElement;
+
+const ELEMENT__MENU__EDIT_PARCEL_ACTION_SAVE = document.getElementById("menu__edit_parcel_action_save")! as HTMLButtonElement;
+const ELEMENT__MENU__EDIT_PARCEL_ACTION_LOG = document.getElementById("menu__edit_parcel_action_log")! as HTMLButtonElement;
+const ELEMENT__MENU__EDIT_PARCEL_ACTION_DELETE = document.getElementById("menu__edit_parcel_action_delete")! as HTMLButtonElement;
+
+const ELEMENT__MENU_VALUE_CURRENT = document.getElementById("menu__value_editor_current")! as HTMLInputElement;
+const ELEMENT__MENU_VALUE_LAST = document.getElementById("menu__value_editor_last")! as HTMLInputElement;
+const ELEMENT__MENU_VALUE_MIN = document.getElementById("menu__value_editor_min")! as HTMLInputElement;
+const ELEMENT__MENU_VALUE_MAX = document.getElementById("menu__value_editor_max")! as HTMLInputElement;
+const ELEMENT__MENU_VALUE_VARIANCE = document.getElementById("menu__value_editor_variance")! as HTMLInputElement;
+
+const ELEMENT__PANEL_EDIT = document.getElementById("panel__edit_parcel")! as HTMLDivElement;
+const ELEMENT__PANEL_VALUE = document.getElementById("panel__value_editor")! as HTMLDivElement;
+const ELEMENT__PANEL_MANAGE_INTERACTIONS = document.getElementById("panel__manage_interactions")! as HTMLDivElement;
+
+const ELEMENT__MENU__EDIT_PARCEL = document.getElementById("menu__edit_parcel")! as HTMLDivElement;
+
+const ELEMENT__PANEL_MANAGE_INTERACTIONS__TYPE = document.getElementById("panel__manage_interactions__type") as HTMLSpanElement;
+
+function logDomElements() {
+	const DOM_ELEMENTS = [
+		ELEMENT__MENU__ADD_PARCEL_ID,
+		ELEMENT__MENU__ADD_PARCEL_SUBMIT,
+		ELEMENT__MENU__EDIT_PARCEL_TYPE,
+		ELEMENT__MENU__EDIT_PARCEL_ID,
+		ELEMENT__MENU__EDIT_PARCEL_NAME,
+		ELEMENT__MENU__EDIT_PARCEL_UNLOCKED,
+		ELEMENT__MENU__EDIT_PARCEL_VALUE,
+		ELEMENT__MENU__EDIT_PARCEL_BUY,
+		ELEMENT__MENU__EDIT_PARCEL_SELL,
+		ELEMENT__MENU__EDIT_PARCEL_CRAFT,
+		ELEMENT__MENU__EDIT_PARCEL_CREATE,
+		ELEMENT__MENU__EDIT_PARCEL_CHARGES,
+		ELEMENT__MENU__EDIT_PARCEL_ACTION_SAVE,
+		ELEMENT__MENU__EDIT_PARCEL_ACTION_LOG,
+		ELEMENT__MENU__EDIT_PARCEL_ACTION_DELETE,
+		ELEMENT__MENU_VALUE_CURRENT,
+		ELEMENT__MENU_VALUE_LAST,
+		ELEMENT__MENU_VALUE_MIN,
+		ELEMENT__MENU_VALUE_MAX,
+		ELEMENT__MENU_VALUE_VARIANCE,
+		ELEMENT__PANEL_EDIT,
+		ELEMENT__PANEL_VALUE,
+		ELEMENT__PANEL_MANAGE_INTERACTIONS,
+		ELEMENT__MENU__EDIT_PARCEL,
+		ELEMENT__PANEL_MANAGE_INTERACTIONS__TYPE,
+	];
+	for (let domElement in DOM_ELEMENTS) {
+		console.log(DOM_ELEMENTS[domElement]);
+	}
+}
+// ? Selecting, filtering and creating new Parcels
+
+// * Filter parcels menu
+function applySearchFilter() {
+	const searchGroup = ELEMENT__SEARCH_FILTER.value as searchFilterOptions;
+	ELEMENT__MENU__SELECT_PARCEL.className = `mode_${searchGroup}`;
+	editorSettings.lastSearchFilter = searchGroup;
+	saveEditorSettings();
+}
+
+ELEMENT__SEARCH_FILTER.addEventListener("change", () => {
+	applySearchFilter();
+});
+// * Create Validation
+
+function checkExistsAddParcelId() {
+	if (ELEMENT__MENU__ADD_PARCEL_ID.value !== "") {
+		ELEMENT__MENU__ADD_PARCEL_ID.classList.add("validate");
+	} else {
+		ELEMENT__MENU__ADD_PARCEL_ID.classList.remove("validate");
+	}
+}
+function checkValidAddParcelId() {
+	if (validateParcelId(ELEMENT__MENU__ADD_PARCEL_ID.value)) {
+		ELEMENT__MENU__ADD_PARCEL_SUBMIT.disabled = false;
+	} else {
+		ELEMENT__MENU__ADD_PARCEL_SUBMIT.disabled = true;
+	}
+}
+
+ELEMENT__MENU__ADD_PARCEL_ID.addEventListener("input", checkExistsAddParcelId);
+ELEMENT__MENU__ADD_PARCEL_ID.addEventListener("input", checkValidAddParcelId);
+
+// ? Parcel Editing
+
+function clearFields() {
+	console.assert(EDITOR__DISABLE_DEBUG, "All fields are being cleared");
+
+	console.assert(EDITOR__DISABLE_DEBUG, "Clearing select parcel panel");
+	ELEMENT__MENU__ADD_PARCEL_ID.value = "";
+	ELEMENT__MENU__ADD_PARCEL_SUBMIT.disabled = true;
+
+	console.assert(EDITOR__DISABLE_DEBUG, "Clearing Properties");
+	ELEMENT__MENU__EDIT_PARCEL_TYPE.value = "";
+	ELEMENT__MENU__EDIT_PARCEL_ID.value = "";
+	ELEMENT__MENU__EDIT_PARCEL_NAME.value = "";
+	ELEMENT__MENU__EDIT_PARCEL_UNLOCKED.indeterminate = true;
+	styleEmptySelect(ELEMENT__MENU__EDIT_PARCEL_TYPE);
+
+	ELEMENT__MENU__EDIT_PARCEL.className = "mode_none";
+
+	console.assert(EDITOR__DISABLE_DEBUG, "Clearing Values");
+	ELEMENT__MENU_VALUE_CURRENT.value = "";
+	ELEMENT__MENU_VALUE_LAST.value = "";
+	ELEMENT__MENU_VALUE_MIN.value = "";
+	ELEMENT__MENU_VALUE_MAX.value = "";
+	ELEMENT__MENU_VALUE_VARIANCE.value = "";
+	setValueValidations();
+}
+ELEMENT__MENU__EDIT_PARCEL_TYPE.addEventListener("change", () => {
+	styleEmptySelect(ELEMENT__MENU__EDIT_PARCEL_TYPE);
+});
+
+// ? Value editing
+
+// * Filtering
+
+function setValueValidations() {
+	const min = ELEMENT__MENU_VALUE_MIN.value;
+	const max = ELEMENT__MENU_VALUE_MAX.value;
+	if (min) {
+		ELEMENT__MENU_VALUE_CURRENT.min = min;
+		ELEMENT__MENU_VALUE_LAST.min = min;
+		ELEMENT__MENU_VALUE_MAX.min = min;
+	}
+	if (max) {
+		ELEMENT__MENU_VALUE_CURRENT.max = max;
+		ELEMENT__MENU_VALUE_LAST.max = max;
+		ELEMENT__MENU_VALUE_MIN.max = max;
+		ELEMENT__MENU_VALUE_VARIANCE.max = max;
+	}
+}
+
+ELEMENT__MENU_VALUE_MIN.addEventListener("input", setValueValidations);
+ELEMENT__MENU_VALUE_MAX.addEventListener("input", setValueValidations);
+
+// ? Utilities
+
+function styleEmptySelect(element: HTMLSelectElement) {
+	if (element.value !== "") {
+		element.classList.remove("invalid");
+	} else {
+		element.classList.add("invalid");
+	}
+}
+
+// ? Editor definition
+
+type InteractionType = "buy" | "sell" | "craft" | "create";
+
+class editorClass {
+	public currentParcel: parcelUndefined = new parcelUndefined("unique:undefined", "Unique Undefined", true);
+	public savedID: parcelID | "" = "";
+	public showValue: boolean = false;
+	public showManageInteractions: boolean = false;
+	public managingInteraction: InteractionType | null = null;
+
+	init() {
+		// Clean up any cached data in the form fields
+		clearFields();
+		loadEditorSettings();
+		// Hide the different panes
+		this.showPanes();
+		// Add the paneButton interactions
+		ELEMENT__MENU__EDIT_PARCEL_NAME.onchange = () => {
+			console.log("Attempting to change Name");
+			this.changeCurrentName();
+		};
+		// Value
+		ELEMENT__MENU__EDIT_PARCEL_VALUE.addEventListener("click", () => {
+			this.showValue = !this.showValue;
+			this.showManageInteractions = false;
+			this.showPanes();
+		});
+		// Buy,Sell,Craft and Create
+		ELEMENT__MENU__EDIT_PARCEL_BUY.addEventListener("click", () => {
+			this.changeInteraction("buy");
+		});
+		ELEMENT__MENU__EDIT_PARCEL_SELL.addEventListener("click", () => {
+			this.changeInteraction("sell");
+		});
+		ELEMENT__MENU__EDIT_PARCEL_CRAFT.addEventListener("click", () => {
+			this.changeInteraction("craft");
+		});
+		ELEMENT__MENU__EDIT_PARCEL_CREATE.addEventListener("click", () => {
+			this.changeInteraction("create");
+		});
+
+		ELEMENT__MENU__EDIT_PARCEL_ACTION_LOG.addEventListener("click", () => {
+			console.log("Logging to console");
+			this.logCurrentParcel();
+		});
+	}
+
+	logCurrentParcel() {
+		console.table(this);
+		console.table(this.currentParcel);
+	}
+	changeCurrentParcelValues() {
+		console.table(this);
+		console.log("Activated this thing!");
+		this.currentParcel.value.current = Number(ELEMENT__MENU_VALUE_CURRENT.value) | 0;
+		this.currentParcel.value.last = Number(ELEMENT__MENU_VALUE_LAST.value) | 0;
+		this.currentParcel.value.min = Number(ELEMENT__MENU_VALUE_MIN.value) | 0;
+		this.currentParcel.value.max = Number(ELEMENT__MENU_VALUE_MAX.value) | 0;
+		this.currentParcel.value.variance = Number(ELEMENT__MENU_VALUE_VARIANCE.value) | 0;
+	}
+
+	changeCurrentName() {
+		if (validateParcelName(this.currentParcel.name)) {
+			console.log(`${this.currentParcel.name} is a valid Name - Changing`);
+			this.currentParcel.name = ELEMENT__MENU__EDIT_PARCEL_NAME.value;
+		} else {
+			console.warn(`${this.currentParcel.name} is not a valid Name`);
+		}
+	}
+
+	changeInteraction(target: InteractionType) {
+		if (this.managingInteraction == target) {
+			// Same interaction clicked - show/hide
+			this.showManageInteractions = !this.showManageInteractions;
+		} else {
+			this.showManageInteractions = true;
+			this.managingInteraction = target;
+		}
+		ELEMENT__PANEL_MANAGE_INTERACTIONS__TYPE.innerHTML = target;
+		this.showValue = false;
+		this.showPanes();
+	}
+
+	showPanes() {
+		console.log("Rendering panels");
+		console.log(!this.showValue);
+		ELEMENT__PANEL_VALUE.hidden = !this.showValue;
+		if (this.showValue) {
+			console.log("Listening for changes to Value");
+			ELEMENT__MENU_VALUE_CURRENT.addEventListener("change", () => {
+				this.changeCurrentParcelValues;
+			});
+			ELEMENT__MENU_VALUE_LAST.addEventListener("change", () => {
+				this.changeCurrentParcelValues;
+			});
+			ELEMENT__MENU_VALUE_MIN.addEventListener("change", () => {
+				this.changeCurrentParcelValues;
+			});
+			ELEMENT__MENU_VALUE_MAX.addEventListener("change", () => {
+				this.changeCurrentParcelValues;
+			});
+			ELEMENT__MENU_VALUE_VARIANCE.addEventListener("change", () => {
+				this.changeCurrentParcelValues;
+			});
+		}
+		ELEMENT__PANEL_MANAGE_INTERACTIONS.hidden = !this.showManageInteractions;
+	}
+
+	getParcelsInStorage(): parcelID[] {
+		return this.getParcelsInLocalStorage();
+	}
+	private getParcelsInLocalStorage(): parcelID[] {
+		console.log(`There are ${localStorage.length} objects in localStorage`);
+		let parcelIDs = [];
+		return parcelIDs;
+	}
+
+	constructor() {}
+	saveParcel() {
+		if (this.currentParcel) {
+			// Parcel exists
+			if (this.currentParcel.id != this.savedID) {
+				// The ID of the currentParcel has changed
+				// Delete original and save
+				this.saveParcelToLocalStorage(true);
+			} else {
+				// Overwrite the item in localStorage
+				this.saveParcelToLocalStorage(false);
+			}
+		} else {
+			// There is no parcel loaded in
+			window.alert("Unable to save parcel, no parcel stored in editor");
+			console.table(this.currentParcel);
+		}
+	}
+	private saveParcelToLocalStorage(deleteOldRecord: boolean = false) {
+		if (deleteOldRecord) {
+			// Delete the old one
+			localStorage.removeItem(this.savedID);
+		}
+		localStorage.setItem(this.currentParcel!.id, JSON.stringify(this.currentParcel));
+	}
+	loadParcelManual(parcel: ParcelAny) {
+		this.savedID = parcel.id;
+		Object.assign(this.currentParcel, parcel);
+		console.log(`${this.savedID} has been loaded into the editor`);
+	}
+	private generateCleanParcel() {
+		// Takes the parcel and returns a clean parcel with only the needed types
+	}
+	private getParcelTypeID(parcel: ParcelAny | parcelUndefined): [string, string] {
+		return [parcel.id.split(":")[0], parcel.id.split(":")[1]];
+	}
+	public renderProperties() {
+		if (this.currentParcel === null) {
+			console.warn("Unable to render properties, parcel has not been loaded");
+			return false;
+		}
+		let [currentType, currentId] = this.getParcelTypeID(this.currentParcel!);
+		console.log([currentType, currentId]);
+		ELEMENT__MENU__EDIT_PARCEL_TYPE.value = currentType;
+		styleEmptySelect(ELEMENT__MENU__EDIT_PARCEL_TYPE);
+		ELEMENT__MENU__EDIT_PARCEL.className = "mode_" + currentType;
+		ELEMENT__MENU__EDIT_PARCEL_ID.value = currentId;
+		ELEMENT__MENU__EDIT_PARCEL_NAME.value = this.currentParcel.name;
+		ELEMENT__MENU__EDIT_PARCEL_UNLOCKED.checked = this.currentParcel.unlocked;
+		ELEMENT__MENU__EDIT_PARCEL_UNLOCKED.indeterminate = false;
+		if (this.currentParcel.value) {
+			ELEMENT__MENU_VALUE_CURRENT.value = String(this.currentParcel.value.current);
+			ELEMENT__MENU_VALUE_LAST.value = String(this.currentParcel.value.last);
+			ELEMENT__MENU_VALUE_MIN.value = String(this.currentParcel.value.min);
+			ELEMENT__MENU_VALUE_MAX.value = String(this.currentParcel.value.max);
+			ELEMENT__MENU_VALUE_VARIANCE.value = String(this.currentParcel.value.variance);
+		}
+		this.showValue = false;
+		this.showManageInteractions = false;
+		this.showPanes();
+	}
+}
+
+// ? Editor loading process
+
+// Start the editor
+let editor = new editorClass();
+export default editor;
+
+editor.init();
+
+reportEditorVersion();
+
+if (editorSettings.useLastSearchFilter) {
+	console.assert(EDITOR__DISABLE_DEBUG, `Setting up search filter to last used setting "${editorSettings.lastSearchFilter}"`);
+	ELEMENT__SEARCH_FILTER.value = editorSettings.lastSearchFilter;
+	applySearchFilter();
+}
+if (editorSettings.useSimpleMode) {
+	console.assert(EDITOR__DISABLE_DEBUG, "Using simplified big interface");
+	document.body.classList.add("simple_mode");
+}
+if (editorSettings.useStrictMode) {
+	console.assert(EDITOR__DISABLE_DEBUG, "Using strict interface, some UI elements are hidden from view");
+	ELEMENT__MENU__EDIT_PARCEL_TYPE.disabled = true;
+	ELEMENT__MENU__EDIT_PARCEL_ID.disabled = true;
+}
+
+// ! Debug
+
+if (!EDITOR__DISABLE_DEBUG) {
+	console.groupCollapsed("Logging watched DOM Elements");
+	logDomElements();
+	console.groupEnd();
+}
+
+// ! INDEV - DEBUG
+editor.loadParcelManual(exampleResource);
+console.table(editor);
+editor.currentParcel.unlocked = true;
+
+// editor.saveParcel();
+
+editor.renderProperties();
+
+editor.getParcelsInStorage();

@@ -1,0 +1,68 @@
+@mixin default_colors {
+	border: 0.25rem solid $c-accent;
+	background-color: $c-background;
+	color: $c-text;
+}
+
+@mixin default_panel {
+	@include default_colors();
+	display: grid;
+	grid-template-columns: 1fr;
+
+	padding: $default-spacing;
+	gap: $default-spacing;
+}
+
+@mixin default_button {
+	@include default_colors();
+	text-align: left;
+	cursor: pointer;
+	padding: calc($default-spacing / 2);
+	&:hover {
+		background-color: $c-accent;
+		border-color: $c-accent;
+		color: $c-background;
+	}
+	&:active {
+		background-color: $c-text;
+		border-color: $c-text;
+		color: $c-background;
+	}
+}
+
+@mixin validation_styling($color: $c-accent, $glow: 0, $weight: inherit) {
+	font-weight: $weight;
+	background: $color;
+	color: $c-background;
+	box-shadow: 0 0 calc($glow * 1rem) $color;
+}
+
+@mixin validating_input {
+	border: none;
+	transition: background-color 0.25s ease-out, box-shadow 0.25s ease-out;
+	padding: 0.5rem;
+
+	@include validation_styling($c-success, 0, 700);
+	&:invalid,
+	&.manual_invalid {
+		@include validation_styling($c-error, 1, 700);
+		&:hover,
+		&:focus {
+			@include validation_styling($c-warn, 1, 700);
+		}
+	}
+	&.empty {
+		@include validation_styling($c-accent, 0, 700);
+	}
+}
+
+
+@mixin darkenOnInteract() {
+	&:hover,
+	&:focus {
+		filter: brightness(0.8);
+	}
+	&:active {
+		filter: brightness(1.1);
+	}
+}

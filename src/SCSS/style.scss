@@ -1,0 +1,237 @@
+// == Reset
+@import "__reset.scss";
+// == Variables and defaults
+@import "__variables.scss";
+@import "__default.scss";
+
+// =! Development Only - Start
+// =! Overrides to variables
+@import "__debug.scss";
+// =! Development Only - End
+
+// == Mixins
+@import "__mixins.scss";
+// == Loading Overlay
+@import "__overlay.scss";
+
+// == Developer Mode Start
+// $c-background: #0a0908;
+// $c-text: #f2f4f3;
+// $c-accent: #004466;
+// $c-success: #58d847;
+// $c-warn: #d89947;
+// $c-error: #d84c47;
+// == Developer Mode End
+
+main {
+	display: flex;
+
+	gap: $default-spacing;
+	padding: $default-spacing;
+	height: 100vh;
+}
+
+main > div {
+	height: calc(100vh - $default-spacing * 2);
+	// min-width: calc(25vw - $default-spacing * 1.2);
+	// width: max-content;
+	// max-width: 40vw;
+	width: 25vw;
+	min-width: 400px;
+	@include default_panel;
+
+	&:not(:first-child) {
+		overflow-y: scroll;
+		grid-template-rows: max-content 1fr;
+		> div {
+			@include default_panel;
+			padding: 0;
+			border: 0;
+
+			> * {
+				height: 3rem;
+			}
+			> div {
+				display: grid;
+				grid-template-columns: max-content max-content;
+				gap: $default-spacing;
+				align-items: center;
+				justify-content: center;
+				input[type="checkbox"] {
+					margin: 0;
+					margin-left: 0;
+					margin-right: auto;
+					padding: 0;
+					width: 1.5rem;
+					height: 1.5rem;
+				}
+			}
+		}
+	}
+	&:has(> div:empty) {
+		display: none;
+	}
+}
+
+#parcel_select {
+	display: grid;
+	grid-template-rows: 1fr max-content;
+
+	div:first-child {
+		overflow-y: scroll;
+	}
+
+	#parcel_list {
+		display: grid;
+		grid-template-columns: 1fr;
+
+		gap: $default-spacing;
+		@include default_colors;
+		padding: $default-spacing;
+		// overflow-y: scroll;
+
+		button {
+			@include default_button;
+			max-height: 3rem;
+		}
+		&:empty {
+			display: none;
+		}
+	}
+	#parcel_add {
+		display: grid;
+		grid-template-columns: max-content 1fr 2rem;
+		grid-template-rows: 1fr;
+		@include default_colors;
+		// padding: $default-spacing;
+		border: 0;
+		align-items: center;
+
+		select {
+			padding: calc($default-spacing / 2);
+			height: 3rem;
+			grid-row: 1/2;
+			grid-column: 1/2;
+			padding-right: 0;
+			// no select arrow
+			-webkit-appearance: none;
+			-moz-appearance: none;
+			appearance: none;
+			border: none;
+			transition: background-color 0.25s ease-out, box-shadow 0.25s ease-out;
+			padding: 0.5rem;
+			&:has(+ input:valid) {
+				@include validation_styling($c-success, 0, 700);
+			}
+			&:has(+ input:invalid) {
+				@include validation_styling($c-error, 1, 700);
+			}
+			&:has(+ input:invalid:hover),
+			&:has(+ input:invalid:focus) {
+				@include validation_styling($c-warn, 1, 700);
+			}
+			&:has(+ input.empty) {
+				@include validation_styling($c-accent, 0, 700);
+			}
+		}
+		input {
+			padding: calc($default-spacing / 2);
+			height: 3rem;
+			@include validating_input;
+			grid-row: 1/2;
+			grid-column: 2/4;
+			&:invalid + button,
+			&.empty + button {
+				display: none;
+			}
+		}
+		button {
+			grid-row: 1/2;
+			grid-column: 3/4;
+			cursor: pointer;
+			background: none;
+			padding: 0;
+			border: 0;
+			border-radius: 8px;
+			height: 2rem;
+			width: 2rem;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: $c-text;
+			transition: transform linear 0.1s;
+			&:hover {
+				transform: translate(0.1rem, -0rem) scale(1.1);
+			}
+			svg {
+				height: 100%;
+				width: 100%;
+				mix-blend-mode: multiply;
+			}
+		}
+	}
+}
+
+#parcel_edit {
+	input,
+	select {
+		@include validating_input;
+	}
+}
+
+#parcel_interaction_set {
+	> div {
+		display: grid;
+		grid-template-columns: max-content 1fr max-content;
+		gap: 0;
+		* {
+			width: 100%;
+		}
+		input,
+		select {
+			@include validating_input;
+			&:invalid + button {
+				@include validation_styling($c-error, 1, 700);
+			}
+			&:invalid:hover + button {
+				@include validation_styling($c-warn, 1, 700);
+			}
+			&:valid + button {
+				@include validation_styling($c-success, 1, 700);
+			}
+		}
+		select {
+			&:has(+ :invalid) {
+				@include validation_styling($c-error, 1, 700);
+			}
+			&:has(+ :invalid:hover) {
+				@include validation_styling($c-warn, 1, 700);
+			}
+			&:has(+ :valid) {
+				@include validation_styling($c-success, 1, 700);
+			}
+		}
+		button {
+			border: none;
+		}
+	}
+}
+
+button {
+	border: none;
+	&.valid {
+		@include validation_styling($c-success, 1, 700);
+		@include darkenOnInteract();
+	}
+	&.invalid {
+		@include validation_styling($c-warn, 1, 700);
+		@include darkenOnInteract();
+	}
+	&.warning {
+		@include validation_styling($c-error, 1, 700);
+		@include darkenOnInteract();
+	}
+	&:not(.valid, .invalid, .warning, .fake_link) {
+		@include default_button();
+	}
+}

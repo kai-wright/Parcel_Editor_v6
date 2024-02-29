@@ -1,0 +1,66 @@
+console.log("Typescript compiler online - 11:23:00");
+
+import { parcelInteraction, parcelResource, parcelValue } from "./parcel__definitions.ts";
+
+let exampleObject = new parcelResource("example", "Example", true, 0, new parcelValue(), [], [], [], []);
+
+exampleObject.value.current = 5;
+exampleObject.value.last = 3;
+exampleObject.value.min = 2;
+exampleObject.value.max = 10;
+exampleObject.value.variance = 7;
+
+exampleObject.craft.push(
+	new parcelInteraction(false, [["resource:example", 100, 100]], 2, [["resource:example", 50, 50]], ["structure:random"])
+);
+exampleObject.create.push(
+	new parcelInteraction(false, [["resource:example", 100, 100]], 1, [["resource:example", 50, 50]], ["structure:random"])
+);
+console.warn(exampleObject.craft[0].checkValidity());
+console.warn(exampleObject.craft);
+
+console.table(exampleObject);
+let message = exampleObject.checkValidity();
+
+console.log(`Interaction was ${exampleObject.validity} according to itself`);
+console.table(message);
+
+const box = document.getElementById("panel_edit") as HTMLDivElement;
+box.innerHTML = "";
+
+message.forEach((message) => {
+	const p = document.createElement("p");
+	p.innerHTML = message[1];
+	p.className = message[0];
+	box.appendChild(p);
+});
+
+const displaySet = ["buy", "sell", "craft", "create"];
+const displayProperties = ["validity", "unlocked", "result", "tier", "consumes", "requires"];
+
+const table = document.createElement("table");
+const tr = document.createElement("tr");
+table.appendChild(tr);
+displayProperties.forEach((displayProperty) => {
+	const th = document.createElement("th");
+	th.innerHTML = displayProperty;
+	tr.appendChild(th);
+});
+displaySet.forEach((property) => {
+	exampleObject[property].forEach((interaction) => {
+		const tr = document.createElement("tr");
+
+		const td = document.createElement("td");
+		td.innerHTML = interaction.name;
+		tr.appendChild(td);
+
+		table.appendChild(tr);
+		displayProperties.forEach((displayProperty) => {
+			const td = document.createElement("td");
+			td.innerHTML = interaction[displayProperty];
+			tr.appendChild(td);
+		});
+	});
+});
+
+box.appendChild(table);

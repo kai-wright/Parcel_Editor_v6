@@ -1,0 +1,417 @@
+// =? Types
+// * ID Structure
+export type parcelType = "resource" | "structure" | "research" | "unique";
+export type parcelID = `${parcelType}:${string}`;
+
+// * parcel groups
+export type parcelQuantity = [parcelID, number]; // [id, quantity]
+export type parcelCounter = [parcelID, number]; // [id, amount remaining]
+export type parcelQuantityChance = [...parcelQuantity, number]; // [id, quantity, chance]
+
+// =? Validity checking and utilities
+
+type validity = "valid" | "invalid" | "error" | "unknown";
+type dataTypes = "string" | "number" | "boolean" | "undefined" | "object";
+
+type validityTarget = [string, dataTypes]; // Target, Intended type
+type validityResult = [validity, string]; // Validity , Message
+
+// =? Regex
+
+type regexTypes = "id" | "name";
+const regexID = new RegExp("^[a-z]([a-z_]*[a-z])?$");
+const regexName = new RegExp("^[a-zA-Z](?:[a-zA-Z ]*[a-zA-Z])?$");
+
+function validateRegex(type: regexTypes, arg: string): validityResult {
+	let isValid: boolean;
+	if (type == "id") {
+		isValid = validateID(arg);
+	} else if (type == "name") {
+		isValid = regexName.test(arg);
+	} else {
+		throw new Error(`Invalid type: ${type}`);
+	}
+	const isValidResult = isValid ? "valid" : "invalid";
+	return [isValidResult, `${isValidResult} ${type}: ${arg}`];
+}
+
+function validateID(id: string): boolean {
+	// Id must be in the format type:id
+	const type = id.split(":")[0];
+	const idName = id.split(":")[1];
+
+	let typeValid: boolean;
+	if (type == "resource" || type == "structure" || type == "research" || type == "unique") {
+		typeValid = true;
+	} else {
+		typeValid = false;
+	}
+	const idNameValid: boolean = regexID.test(idName);
+
+	return typeValid && idNameValid;
+}
+
+function returnValidity(validityResults: validityResult[]): validity {
+	// Check if there are any "error" or "unknown" messages
+	const hasErrorOrUnknown = (message: validityResult) => message[0] === "error" || message[0] === "unknown";
+	if (validityResults.some(hasErrorOrUnknown)) {
+		// If there are "error" or "unknown" issues, this is in error and cannot continue
+		return "error";
+	}
+
+	// Check for "invalid" messages
+	const hasInvalid = (message: validityResult) => message[0] === "invalid";
+	if (validityResults.some(hasInvalid)) {
+		// If there are "invalid" issues, this is invalid but parsing can continue
+		return "invalid";
+	}
+
+	// If there are no issues, then this is valid and parsing can continue
+	return "valid";
+}
+
+function verifyClassProperties(instance: any, propertiesToCheck: validityTarget[]): validityResult[] {
+	const results: validityResult[] = [];
+	for (const [property, intendedType] of propertiesToCheck) {
+		if (!(property in instance) || instance[property] === undefined) {
+			results.push(["error", `Property ${property} is missing`]);
+		} else {
+			const actualType = typeof instance[property];
+			if (actualType !== intendedType) {
+				results.push(["error", `Property ${property} is of type ${actualType}, expected ${intendedType}`]);
+			} else {
+				results.push(["valid", `Property ${property} exists and is of type ${actualType} as expected`]);
+			}
+		}
+	}
+	return results;
+}
+
+// =? Class structures
+export class parcelInteraction {
+	public validity: validity = "unknown";
+	public unlocked: boolean | undefined;
+	public result: parcelQuantityChance[];
+	public tier: number;
+	public consumes: parcelQuantityChance[];
+	public requires: parcelID[];
+
+	constructor(
+		unlocked: boolean = false,
+		result: parcelQuantityChance[] = [],
+		tier: number = 0,
+		consumes: parcelQuantityChance[] = [],
+		requires: parcelID[] = []
+	) {
+		this.unlocked = unlocked;
+		this.result = result;
+		this.tier = tier;
+		this.consumes = consumes;
+		this.requires = requires;
+
+		this.checkValidity();
+	}
+	checkValidity(): validityResult[] {
+		let messages: validityResult[] = [];
+
+		// Are all properties defined and of correct type?
+		// Are known properties valid?
+		const propertiesToCheck: validityTarget[] = [
+			["unlocked", "boolean"],
+			["tier", "number"],
+			["consumes", "object"],
+			["requires", "object"],
+			["result", "object"],
+		];
+		messages = [...messages, ...verifyClassProperties(this, propertiesToCheck)];
+
+		// Are known properties valid?
+		if (this.tier! < 0) {
+			messages.push(["invalid", "Tier should be zero or larger"]);
+			console.info(`I got ${this.tier}`);
+		}
+		if (this.consumes.length == 0 && this.requires.length == 0) {
+			messages.push(["invalid", "Interaction is missing a required parcel or consumed parcel"]);
+		}
+		if (this.result.length == 0) {
+			messages.push(["invalid", "Interaction is missing a result"]);
+		}
+
+		this.validity = returnValidity(messages);
+
+		return messages;
+	}
+}
+export class parcelValue {
+	public validity: validity = "unknown";
+	public current: number;
+	public last: number;
+	public min: number;
+	public max: number;
+	public variance: number;
+
+	constructor(current: number = 0, last: number = 0, min: number = 0, max: number = 0, variance: number = 0) {
+		this.current = current;
+		this.last = last;
+		this.min = min;
+		this.max = max;
+		this.variance = variance;
+
+		this.checkValidity();
+	}
+	checkValidity(): validityResult[] {
+		let messages: validityResult[] = [];
+
+		// Are all properties defined and of correct type?
+		// Are known properties valid?
+		const propertiesToCheck: validityTarget[] = [
+			["current", "number"],
+			["last", "number"],
+			["min", "number"],
+			["max", "number"],
+			["variance", "number"],
+		];
+
+		messages = [...messages, ...verifyClassProperties(this, propertiesToCheck)];
+
+		// Are known properties valid?
+		// Min/Max values
+		if (this.current < this.min || this.last < this.min || this.max < this.min || this.variance < this.min) {
+			messages.push(["invalid", "A value is lower than minimum"]);
+		}
+		if (this.current > this.max || this.last > this.max || this.max > this.max || this.variance > this.max) {
+			messages.push(["invalid", "A value is higher than maximum"]);
+		}
+		// Are all defined values 0 or more?
+		if (this.current < 0 || this.last < 0 || this.min < 0 || this.max < 0 || this.variance < 0) {
+			messages.push(["invalid", "A value is less than 0"]);
+		}
+
+		this.validity = returnValidity(messages);
+
+		return messages;
+	}
+}
+export class parcelCharge {
+	public validity: validity = "unknown";
+	constructor(
+		public remaining: number, // Amount of charges remaining
+		public amplifier: number, // How much the charge effects the action
+		public requires: parcelQuantity[] // Set of resources that are consumed and how much of them that are consumed
+	) {
+		this.checkValidity();
+	}
+
+	checkValidity(): validityResult[] {
+		let messages: validityResult[] = [];
+
+		// Are all properties defined and of correct type?
+		// Are known properties valid?
+		const propertiesToCheck: validityTarget[] = [
+			["remaining", "number"],
+			["amplifier", "number"],
+			["requires", "object"],
+		];
+
+		messages = [...messages, ...verifyClassProperties(this, propertiesToCheck)];
+
+		// Are all defined values 0 or more?
+		if (this.remaining < 0) {
+			messages.push(["invalid", "Charge is less than 0"]);
+		}
+		if (this.amplifier < 0) {
+			messages.push(["invalid", "Amplifier is less than 0"]);
+		}
+		if (this.requires.length == 0) {
+			messages.push(["invalid", "Charge is missing a required resource"]);
+		}
+
+		this.validity = returnValidity(messages);
+
+		return messages;
+	}
+}
+export class parcelChargeInteraction {
+	public validity: validity = "unknown";
+	constructor(
+		public bases: parcelCharge[], // Effect is additive, at least 1 required to run if any exist.
+		public amplifiers: parcelCharge[], // Effect is a multiplier, not required to run
+		public baseCharge: number, // 0 for no operation without requiresCharge, any higher value for increased base production
+		public currentCharge: number // Current charge
+	) {}
+}
+export abstract class parcel {
+	public validity: validity = "unknown";
+	constructor(public id: parcelID, public name: string, public unlocked: boolean) {}
+	abstract checkValidity(): validityResult[];
+}
+export class parcelResource extends parcel {
+	/**
+	 * Constructor for the parcelResource class.
+	 *
+	 * @param {string} id - the unique identifier for the parcel
+	 * @param {string} name - the name of the parcel
+	 * @param {boolean} unlocked - indicates if the parcel is unlocked
+	 * @param {number} owned - the quantity of the parcel owned
+	 * @param {parcelValue} value - the value of the parcel
+	 * @param {parcelInteraction[]} buy - array of interactions for buying the parcel
+	 * @param {parcelInteraction[]} sell - array of interactions for selling the parcel
+	 * @param {parcelInteraction[]} craft - array of interactions for crafting the parcel
+	 * @param {parcelInteraction[]} create - array of interactions for creating the parcel
+	 * @return {void}
+	 */
+	constructor(
+		id: string,
+		public name: string,
+		public unlocked: boolean,
+		public owned: number,
+		public value: parcelValue,
+
+		public buy: parcelInteraction[],
+		public sell: parcelInteraction[],
+		public craft: parcelInteraction[],
+		public create: parcelInteraction[]
+	) {
+		const parcelID: parcelID = `resource:${id}`;
+		super(parcelID, name, unlocked);
+	}
+
+	checkValidity(): validityResult[] {
+		let messages: validityResult[] = [];
+
+		// Check validity of value
+		this.value.checkValidity();
+		const valueValidity: validity = this.value.validity;
+		messages.push([valueValidity, "Value validity"]);
+		// Check the validity of each interaction
+		this.buy.forEach((interaction) => {
+			console.table(interaction.checkValidity());
+			messages.push([interaction.validity, "Buy validity"]);
+		});
+
+		this.sell.forEach((interaction) => {
+			console.table(interaction.checkValidity());
+			messages.push([interaction.validity, "Sell validity"]);
+		});
+
+		this.craft.forEach((interaction) => {
+			console.table(interaction.checkValidity());
+			messages.push([interaction.validity, "Craft validity"]);
+		});
+
+		this.create.forEach((interaction) => {
+			console.table(interaction.checkValidity());
+			messages.push([interaction.validity, "Create validity"]);
+		});
+
+		// Validate ID and Name
+		messages.push(validateRegex("id", this.id));
+		messages.push(validateRegex("name", this.name));
+
+		const propertiesToCheck: validityTarget[] = [
+			["owned", "number"],
+			["buy", "object"],
+			["sell", "object"],
+			["craft", "object"],
+			["create", "object"],
+		];
+
+		messages = [...messages, ...verifyClassProperties(this, propertiesToCheck)];
+
+		if (this.owned < 0) {
+			messages.push(["invalid", "Owned cannot be less than 0"]);
+		}
+
+		if (this.buy.length == 0 && this.sell.length == 0 && this.craft.length == 0 && this.create.length == 0) {
+			messages.push(["invalid", "Resource is missing a buy, sell, craft, or create interaction"]);
+		}
+
+		this.validity = returnValidity(messages);
+		return messages;
+	}
+}
+export class parcelStructure extends parcel {
+	/**
+	 * Constructor for the parcelStructure class.
+	 *
+	 * @param {string} id - the unique identifier for the parcel
+	 * @param {string} name - the name of the parcel
+	 * @param {boolean} unlocked - indicates if the parcel is unlocked
+	 * @param {number} owned - the quantity of the parcel owned
+	 * @param {parcelValue} value - the value of the parcel
+	 * @param {parcelChargeInteraction} charges - the amount of charges/energy remaining
+	 * @param {parcelInteraction[]} buy - array of interactions for buying the parcel
+	 * @param {parcelInteraction[]} sell - array of interactions for selling the parcel
+	 * @param {parcelInteraction[]} craft - array of interactions for crafting the parcel
+	 * @param {parcelInteraction[]} create - array of interactions for creating the parcel
+	 * @return {void}
+	 */
+	constructor(
+		id: string,
+		public name: string,
+		public unlocked: boolean,
+		public owned: number,
+		public value: parcelValue,
+
+		public charges: parcelChargeInteraction,
+
+		public buy: parcelInteraction[],
+		public sell: parcelInteraction[],
+		public craft: parcelInteraction[],
+		public create: parcelInteraction[]
+	) {
+		const parcelID: parcelID = `structure:${id}`;
+		super(parcelID, name, unlocked);
+	}
+	checkValidity(): validityResult[] {
+		return [];
+	}
+}
+export class parcelResearch extends parcel {
+	constructor(id: string, public name: string, public unlocked: boolean, public craft: parcelInteraction[]) {
+		const parcelID: parcelID = `research:${id}`;
+		super(parcelID, name, unlocked);
+	}
+	checkValidity(): validityResult[] {
+		return [];
+	}
+}
+export class parcelUnique extends parcel {
+	constructor(id: string, public name: string, public unlocked: boolean) {
+		const parcelID: parcelID = `unique:${id}`;
+		super(parcelID, name, unlocked);
+	}
+	checkValidity(): validityResult[] {
+		return [];
+	}
+}
+
+// export class parcelUndefined extends parcel {
+// 	public owned: number = 0;
+// 	public value: parcelValue = new parcelValue();
+// 	public charges?: parcelChargeInteraction = new parcelChargeInteraction([], [], 0, 0);
+// 	public buy?: parcelInteraction[] = [];
+// 	public sell?: parcelInteraction[] = [];
+// 	public craft?: parcelInteraction[] = [];
+// 	public create?: parcelInteraction[] = [];
+// 	constructor(public id: parcelID, public name: string, public unlocked: boolean) {
+// 		super(id, name, unlocked);
+// 	}
+// }
+
+export type ParcelAny = parcelResource | parcelStructure | parcelResearch | parcelUnique;
+
+// export {
+// 	parcelID,
+// 	parcelQuantity,
+// 	parcelQuantityChance,
+// 	parcelValue,
+// 	parcelInteraction,
+// 	parcelCharge,
+// 	parcelChargeInteraction,
+// 	parcel,
+// 	parcelResource,
+// 	parcelStructure,
+// 	parcelResearch,
+// 	parcelUnique
+// };

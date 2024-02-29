@@ -1,0 +1,37 @@
+// Defaults and outer layout
+
+:root {
+	font-size: 125%;
+	font-family: Avenir, Montserrat, Corbel, "URW Gothic", source-sans-pro, sans-serif;
+	font-weight: normal;
+}
+
+body {
+	background-color: $c-background;
+	color: $c-text;
+
+	display: grid;
+	width: max(max-content,100%);
+}
+
+button,
+input,
+select {
+	font-family: inherit;
+	font-weight: inherit;
+	font-size: inherit;
+}
+
+a, .fake_link {
+	text-decoration: underline;
+	text-decoration-thickness: 0.1rem;
+	background: none;
+	border: none;
+	color: $c-accent;
+	cursor: pointer;
+}
+
+p {
+	line-height: 1.5;
+	max-width: min(60ch,100%);
+}

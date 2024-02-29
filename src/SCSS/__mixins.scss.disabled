@@ -1,0 +1,119 @@
+$default: 1rem;
+$small: 0.5rem;
+
+@mixin default_padding {
+	padding: $default;
+}
+@mixin small_padding {
+	padding: $small;
+}
+@mixin default_gap {
+	gap: $default;
+}
+@mixin small_gap {
+	gap: $small;
+}
+@mixin default_outline {
+	border: 0.2rem solid $c-accent;
+}
+
+@mixin notification_box($color) {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	width: clamp(10vmin, 30%, 80vmax);
+	height: clamp(10vmin, 30%, 80vmax);
+	transform: translate(-50%, -50%);
+
+	padding: 2rem;
+
+	border-color: $color;
+	border-width: 1rem;
+	border-style: double;
+
+	color: $color;
+	background-color: $c-background;
+
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+
+	font-size: 130%;
+	h2 {
+		font-weight: 900;
+	}
+}
+
+@mixin default_button() {
+	border-width: 4px;
+	border-color: $c-accent;
+	border-style: solid;
+	cursor: pointer;
+}
+
+@mixin basic_input() {
+	// border-radius: 0;
+	border-color: $c-accent;
+	border-width: 0.2rem;
+	border-style: solid;
+	background-color: inherit;
+
+	@include small_padding();
+}
+
+@mixin basic_input_interactions() {
+	background-color: $c-background;
+	color: $c-text;
+	transition: all 0s linear;
+	&:hover,
+	&:focus {
+		transition: all 0.2s linear;
+		background-color: $c-accent;
+		color: $c-background;
+		border-color: $c-accent;
+		border-width: 0.2rem;
+		border-style: solid;
+	}
+	&:active {
+		transition: all 0.05s linear;
+		background-color: $c-text;
+		color: $c-background;
+		border-color: $c-text;
+		border-width: 0.2rem;
+		border-style: solid;
+	}
+	&:disabled {
+		cursor: not-allowed;
+	}
+}
+
+@mixin validation_warning($color-style, $weight: 900) {
+	transition: all 0.5s linear;
+
+	background-color: $color-style;
+	color: $c-background;
+
+	border-color: $color-style;
+	border-width: 0.2rem;
+	border-style: solid;
+	box-shadow: 0 0 0.75rem $color-style;
+
+	font-weight: $weight;
+}
+
+@mixin basic_input_validation_warnings() {
+	// Its all wrong!
+	&:not([type="checkbox"]):invalid {
+		@include validation_warning($c-error);
+	}
+	// Looks like you're working on it
+	&:hover:not([type="checkbox"]):invalid,
+	&:focus:not([type="checkbox"]):invalid {
+		@include validation_warning($c-warn);
+	}
+	// Its fine now!
+	&:not([type="checkbox"]):valid,
+	&:not([type="checkbox"]):disabled {
+		@include validation_warning($c-success, inherit);
+	}
+}

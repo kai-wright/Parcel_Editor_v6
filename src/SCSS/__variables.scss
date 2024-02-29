@@ -1,0 +1,26 @@
+:root {
+	--c-background: #f2f4f3;
+	--c-text: #0a0908;
+	--c-accent: #004466;
+	--c-success: #58d847;
+	--c-warn: #d89947;
+	--c-error: #d84c47;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--c-background: #0a0908;
+		--c-text: #f2f4f3;
+	}
+}
+
+$c-background: var(--c-background);
+$c-text: var(--c-text);
+$c-accent: var(--c-accent);
+$c-success: var(--c-success);
+$c-warn: var(--c-warn);
+$c-error: var(--c-error);
+
+$overlay-wait : 3s;
+$overlay-speed : 2s;
+
+$default-spacing : 1rem;

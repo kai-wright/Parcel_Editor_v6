@@ -1,0 +1,20 @@
+{
+  "name": "parcel_editor",
+  "version": "5.0.0",
+  "description": "Editor for data files for the Parcel project",
+  "source": "src/index.html",
+  "scripts": {
+    "start": "parcel",
+    "build": "parcel build"
+  },
+  "devDependencies": {
+    "@parcel/transformer-sass": "^2.11.0",
+    "parcel": "^2.11.0"
+  },
+  "keywords": [
+    "parcel",
+    "editor"
+  ],
+  "author": "Kai Wright",
+  "license": "MIT"
+}
