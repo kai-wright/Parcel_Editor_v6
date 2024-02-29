@@ -4,8 +4,8 @@
   "description": "Editor for data files for the Parcel project",
   "source": "src/index.html",
   "scripts": {
-    "start": "parcel",
-    "build": "parcel build"
+    "start": "parcel --dist-dir docs",
+    "build": "parcel build --dist-dir docs"
   },
   "devDependencies": {
     "@parcel/transformer-sass": "^2.11.0",
